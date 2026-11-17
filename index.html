@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Godzilla: Apex Extinction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #140c0a;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+        #game-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            background: #140c0a;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        .hud-panel {
+            background: rgba(12, 16, 24, 0.78);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+        }
+        .atomic-glow {
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.75), inset 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+        .btn-titan {
+            background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
+            border: 1px solid #7dd3fc;
+            box-shadow: 0 0 25px rgba(14, 165, 233, 0.5);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-titan:hover {
+            transform: scale(1.04);
+            box-shadow: 0 0 35px rgba(56, 189, 248, 0.85);
+        }
+        .btn-titan:active {
+            transform: scale(0.97);
+        }
+        .touch-pad-btn {
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            backdrop-filter: blur(4px);
+        }
+        .touch-pad-btn:active {
+            background: rgba(56, 189, 248, 0.35);
+            border-color: #38bdf8;
+        }
+        #touch-controls {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0 max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        .touch-dpad {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .touch-dpad .touch-pad-btn {
+            width: clamp(46px, 12vw, 56px);
+            height: clamp(46px, 12vw, 56px);
+            font-size: clamp(14px, 3.5vw, 18px);
+        }
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            max-width: 58%;
+            gap: 6px;
+        }
+        .action-buttons .touch-pad-btn {
+            min-width: clamp(46px, 11vw, 64px);
+            height: clamp(44px, 10.5vw, 52px);
+            padding: 4px 8px;
+            font-size: clamp(9px, 2.3vw, 11px);
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Full-Viewport Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top Gameplay HUD -->
+    <div id="hud-layer" class="fixed top-0 left-0 right-0 p-3 sm:p-4 flex flex-wrap items-start justify-between gap-2 pointer-events-none z-10">
+        <!-- Godzilla Status & Bars -->
+        <div class="hud-panel rounded-xl p-2.5 sm:p-3 min-w-[215px] sm:min-w-[270px]">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="font-cinzel font-black text-sky-400 text-xs sm:text-sm tracking-wider">GODZILLA // TITANUS GOJIRA</span>
+                <span id="power-badge" class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40">ATOMIC LV.1</span>
+            </div>
+            <!-- Titan Health Bar -->
+            <div class="mb-2">
+                <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-0.5">
+                    <span>TITAN VITALITY</span>
+                    <span id="hp-text">100 / 100</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
+                    <div id="hp-bar" class="h-full bg-gradient-to-r from-emerald-500 to-lime-400 transition-all duration-150" style="width: 100%;"></div>
+                </div>
+            </div>
+            <!-- Atomic Breath Energy Bar -->
+            <div>
+                <div class="flex justify-between text-[10px] font-bold text-sky-300 mb-0.5">
+                    <span>ATOMIC RADIATION</span>
+                    <span id="atomic-text">100%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
+                    <div id="atomic-bar" class="h-full bg-gradient-to-r from-blue-600 via-sky-400 to-cyan-200 atomic-glow transition-all duration-75" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage & Score Center Readout -->
+        <div class="hud-panel rounded-xl px-4 py-2 text-center">
+            <div id="stage-name" class="font-cinzel font-bold text-amber-400 text-xs sm:text-sm tracking-widest">ACT I: VOLCANIC COASTLINE</div>
+            <div class="flex items-center justify-center gap-4 mt-1">
+                <div class="text-xs font-extrabold text-slate-200">SCORE: <span id="score-text" class="text-amber-300">000000</span></div>
+                <div class="text-xs font-extrabold text-slate-200">PROGRESS: <span id="progress-text" class="text-sky-300">0%</span></div>
+            </div>
+        </div>
+
+        <!-- Audio & Quick Controls -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="mute-btn" class="hud-panel rounded-xl px-3 py-2 text-xs font-bold text-slate-200 hover:text-sky-300 transition">
+                AUDIO: ON
+            </button>
+        </div>
+    </div>
+
+    <!-- Boss Health Bar (Act III Indominus Rex) -->
+    <div id="boss-hud" class="hidden fixed top-24 left-1/2 -translate-x-1/2 w-[90%] max-w-xl hud-panel rounded-xl p-3 z-10 pointer-events-none">
+        <div class="flex justify-between items-center mb-1">
+            <span class="font-cinzel font-black text-rose-400 text-xs sm:text-sm tracking-widest">APEX HYBRID // INDOMINUS REX</span>
+            <span id="boss-hp-text" class="text-xs font-bold text-rose-200">420 / 420</span>
+        </div>
+        <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-rose-500/40">
+            <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-rose-700 via-red-500 to-amber-500 transition-all duration-100" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- Center Toast Banner -->
+    <div id="toast-banner" class="fixed top-36 left-1/2 -translate-x-1/2 px-5 py-2 rounded-full hud-panel font-cinzel font-bold text-xs sm:text-sm text-sky-200 tracking-wider opacity-0 transition-opacity duration-300 pointer-events-none z-10 text-center">
+        ACT I: VOLCANIC COASTLINE
+    </div>
+
+    <!-- On-Screen Touch / Mouse Action Controls -->
+    <div id="touch-controls" class="pointer-events-none z-10 sm:opacity-85 hover:opacity-100 transition-opacity">
+        <!-- Directional Pad -->
+        <div class="touch-dpad pointer-events-auto">
+            <button id="btn-left" class="touch-pad-btn rounded-2xl flex items-center justify-center text-slate-100 font-black">◀</button>
+            <button id="btn-right" class="touch-pad-btn rounded-2xl flex items-center justify-center text-slate-100 font-black">▶</button>
+        </div>
+        <!-- Combat & Jump Buttons -->
+        <div class="action-buttons pointer-events-auto">
+            <button id="btn-roar" class="touch-pad-btn rounded-2xl flex items-center justify-center text-amber-300 font-extrabold tracking-wider">ROAR [R]</button>
+            <button id="btn-tail" class="touch-pad-btn rounded-2xl flex items-center justify-center text-emerald-300 font-extrabold tracking-wider">TAIL [E]</button>
+            <button id="btn-fire" class="touch-pad-btn rounded-2xl flex items-center justify-center text-sky-300 font-extrabold tracking-wider border-sky-400/60">FIRE [F]</button>
+            <button id="btn-jump" class="touch-pad-btn rounded-2xl flex items-center justify-center text-white font-extrabold tracking-wider">JUMP [W]</button>
+        </div>
+    </div>
+
+    <!-- Title / Start Overlay -->
+    <div id="start-screen" class="fixed inset-0 bg-slate-950/65 backdrop-blur-[3px] flex flex-col items-center justify-center p-6 z-20 cursor-pointer">
+        <div class="max-w-2xl w-full hud-panel rounded-3xl p-6 sm:p-10 text-center border border-sky-500/30">
+            <div class="text-xs font-extrabold tracking-[0.3em] text-sky-400 uppercase mb-2">KAIJU SIDE-SCROLLING ACTION</div>
+            <h1 class="font-cinzel font-black text-3xl sm:text-5xl text-white tracking-wider mb-3 drop-shadow-[0_4px_18px_rgba(56,189,248,0.45)]">
+                GODZILLA: APEX EXTINCTION
+            </h1>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mb-6">
+                Traverse three prehistoric volcanic acts and unleash thermonuclear atomic breath upon apex predators:
+                <span class="text-amber-300 font-semibold">Tyrannosaurus Rex</span>,
+                <span class="text-cyan-300 font-semibold">Mosasaurus</span>,
+                <span class="text-emerald-300 font-semibold">Therizinosaurus</span>, and the genetically engineered
+                <span class="text-rose-400 font-semibold">Indominus Rex</span>.
+            </p>
+
+            <!-- Control Legend Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-left mb-7">
+                <div class="bg-slate-900/80 border border-slate-700/70 rounded-xl p-2.5">
+                    <div class="text-[10px] font-bold text-slate-400">MOVE</div>
+                    <div class="text-xs font-extrabold text-white mt-0.5">A / D or ◀ / ▶</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700/70 rounded-xl p-2.5">
+                    <div class="text-[10px] font-bold text-slate-400">JUMP (T-REX HT)</div>
+                    <div class="text-xs font-extrabold text-white mt-0.5">W / ▲ / SPACE</div>
+                </div>
+                <div class="bg-slate-900/80 border border-sky-500/40 rounded-xl p-2.5">
+                    <div class="text-[10px] font-bold text-sky-400">ATOMIC FIRE</div>
+                    <div class="text-xs font-extrabold text-sky-200 mt-0.5">HOLD F / Z / CLICK</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700/70 rounded-xl p-2.5">
+                    <div class="text-[10px] font-bold text-amber-400">TAIL / ROAR</div>
+                    <div class="text-xs font-extrabold text-amber-200 mt-0.5">E (TAIL) / R (ROAR)</div>
+                </div>
+            </div>
+
+            <button id="start-btn" class="btn-titan font-cinzel font-black text-white text-base sm:text-lg px-8 py-3.5 rounded-2xl tracking-widest uppercase">
+                UNLEASH THE KING (OR PRESS ENTER)
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory / Game Over Overlay -->
+    <div id="end-screen" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 z-30">
+        <div class="max-w-lg w-full hud-panel rounded-3xl p-8 text-center border border-amber-500/30">
+            <h2 id="end-title" class="font-cinzel font-black text-3xl sm:text-4xl text-amber-400 tracking-wider mb-2">
+                APEX SUPREMACY
+            </h2>
+            <p id="end-subtitle" class="text-slate-300 text-xs sm:text-sm mb-5">
+                INDOMINUS REX VANQUISHED — THE KING REIGNS
+            </p>
+            <div id="end-stats" class="font-cinzel font-bold text-lg text-sky-300 bg-slate-900/80 rounded-xl py-3 px-4 border border-slate-700 mb-6">
+                FINAL SCORE: 000000
+            </div>
+            <button id="restart-btn" class="btn-titan font-cinzel font-black text-white text-sm sm:text-base px-8 py-3.5 rounded-2xl tracking-widest uppercase">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+<script>
+(() => {
+    'use strict';
+
+    // =========================================================================
+    // 1. CANVAS & SYNCHRONOUS VIEWPORT INITIALIZATION
+    // =========================================================================
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Logical vertical coordinate system for crisp responsive scaling across devices
+    const WORLD_HEIGHT = 600;
+    const GROUND_Y = 505;
+    let viewWidth = 1280;
+    let viewHeight = 600;
+    let renderScale = 1;
+
+    function resizeCanvas() {
+        const w = Math.max(window.innerWidth || document.documentElement.clientWidth || 1024, 320);
+        const h = Math.max(window.innerHeight || document.documentElement.clientHeight || 600, 320);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+
+        renderScale = h / WORLD_HEIGHT;
+        viewHeight = WORLD_HEIGHT;
+        viewWidth = w / renderScale;
+
+        ctx.setTransform(dpr * renderScale, 0, 0, dpr * renderScale, 0, 0);
+    }
+
+    // Run resize synchronously before first frame so dimensions are never 0
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // =========================================================================
+    // 2. CALIBRATED JUMP PHYSICS (MATCHING T-REX STANDING HEIGHT = 122px)
+    // =========================================================================
+    const GRAVITY = 1950; // px/s^2
+    const TREX_STANDING_HEIGHT = 122; // Exact T-Rex standing height in world units
+    // Exact kinematics: v_y = -sqrt(2 * g * h) so apex height equals 122px
+    const GODZILLA_JUMP_VY = -Math.sqrt(2 * GRAVITY * TREX_STANDING_HEIGHT);
+
+    // =========================================================================
+    // 3. PROCEDURAL REALISM TEXTURE GENERATORS (DERMAL SCALES & BASALT STRATA)
+    // =========================================================================
+    function createScalePattern(baseColor, highlightColor, shadowColor) {
+        const pCanvas = document.createElement('canvas');
+        pCanvas.width = 48;
+        pCanvas.height = 48;
+        const pCtx = pCanvas.getContext('2d');
+
+        pCtx.fillStyle = baseColor;
+        pCtx.fillRect(0, 0, 48, 48);
+
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 4; col++) {
+                const offsetX = (row % 2) * 6;
+                const x = col * 12 + offsetX;
+                const y = row * 12;
+
+                pCtx.fillStyle = shadowColor;
+                pCtx.beginPath();
+                pCtx.arc(x + 6, y + 7, 5.2, 0, Math.PI * 2);
+                pCtx.fill();
+
+                pCtx.fillStyle = highlightColor;
+                pCtx.beginPath();
+                pCtx.arc(x + 5, y + 5, 4.1, 0, Math.PI * 2);
+                pCtx.fill();
+            }
+        }
+        return ctx.createPattern(pCanvas, 'repeat');
+    }
+
+    function createBasaltPattern() {
+        const bCanvas = document.createElement('canvas');
+        bCanvas.width = 96;
+        bCanvas.height = 96;
+        const bCtx = bCanvas.getContext('2d');
+
+        bCtx.fillStyle = '#1c1917';
+        bCtx.fillRect(0, 0, 96, 96);
+
+        // Stratified volcanic rock layers & cracks
+        const colors = ['#292524', '#171412', '#332d2b', '#0c0a09'];
+        for (let i = 0; i < 28; i++) {
+            bCtx.fillStyle = colors[i % colors.length];
+            const rx = (i * 29) % 96;
+            const ry = (i * 19) % 96;
+            bCtx.fillRect(rx, ry, 24 + (i % 18), 8 + (i % 10));
+        }
+        bCtx.strokeStyle = 'rgba(234, 88, 12, 0.14)';
+        bCtx.lineWidth = 1.5;
+        bCtx.beginPath();
+        bCtx.moveTo(0, 32);
+        bCtx.lineTo(42, 48);
+        bCtx.lineTo(96, 28);
+        bCtx.stroke();
+
+        return ctx.createPattern(bCanvas, 'repeat');
+    }
+
+    const godzillaSkinPattern = createScalePattern('#1e293b', '#334155', '#0f172a');
+    const trexSkinPattern = createScalePattern('#4a3525', '#654934', '#2d1f14');
+    const theriSkinPattern = createScalePattern('#1f3a2e', '#2d5242', '#11221a');
+    const mosaSkinPattern = createScalePattern('#163847', '#215268', '#0c212b');
+    const indomSkinPattern = createScalePattern('#cbd5e1', '#e2e8f0', '#94a3b8');
+    const basaltPattern = createBasaltPattern();
+
+    // =========================================================================
+    // 4. WEB AUDIO SYNTHESIZER (NON-BLOCKING & SAFE)
+    // =========================================================================
+    class SoundEngine {
+        constructor() {
+            this.ctx = null;
+            this.muted = false;
+            this.beamGain = null;
+            this.beamOsc = null;
+        }
+
+        init() {
+            try {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) return;
+                    this.ctx = new AudioCtx();
+                    this.setupAtomicBeamLoop();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(() => {});
+                }
+            } catch (e) {
+                this.ctx = null;
+            }
+        }
+
+        setupAtomicBeamLoop() {
+            if (!this.ctx) return;
+            try {
+                this.beamOsc = this.ctx.createOscillator();
+                const subOsc = this.ctx.createOscillator();
+                const filter = this.ctx.createBiquadFilter();
+                this.beamGain = this.ctx.createGain();
+
+                this.beamOsc.type = 'sawtooth';
+                this.beamOsc.frequency.value = 68;
+                subOsc.type = 'sine';
+                subOsc.frequency.value = 42;
+
+                filter.type = 'lowpass';
+                filter.frequency.value = 420;
+
+                this.beamGain.gain.value = 0;
+
+                this.beamOsc.connect(filter);
+                subOsc.connect(filter);
+                filter.connect(this.beamGain);
+                this.beamGain.connect(this.ctx.destination);
+
+                this.beamOsc.start();
+                subOsc.start();
+            } catch (e) {
+                this.beamGain = null;
+            }
+        }
+
+        toggleMute() {
+            this.muted = !this.muted;
+            document.getElementById('mute-btn').textContent = this.muted ? 'AUDIO: OFF' : 'AUDIO: ON';
+            if (this.muted && this.beamGain && this.ctx) {
+                try {
+                    this.beamGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+                } catch (e) {}
+            }
+        }
+
+        setAtomicBeam(active, overcharged = false) {
+            if (!this.ctx || !this.beamGain) return;
+            try {
+                const now = this.ctx.currentTime;
+                if (active && !this.muted) {
+                    this.beamOsc.frequency.setTargetAtTime(overcharged ? 94 : 68, now, 0.08);
+                    this.beamGain.gain.setTargetAtTime(overcharged ? 0.28 : 0.18, now, 0.06);
+                } else {
+                    this.beamGain.gain.setTargetAtTime(0, now, 0.08);
+                }
+            } catch (e) {}
+        }
+
+        playGodzillaRoar() {
+            if (!this.ctx || this.muted) return;
+            try {
+                const now = this.ctx.currentTime;
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const filter = this.ctx.createBiquadFilter();
+                const gain = this.ctx.createGain();
+
+                osc1.type = 'sawtooth';
+                osc2.type = 'triangle';
+
+                osc1.frequency.setValueAtTime(510, now);
+                osc1.frequency.exponentialRampToValueAtTime(185, now + 0.35);
+                osc1.frequency.exponentialRampToValueAtTime(58, now + 1.3);
+
+                osc2.frequency.setValueAtTime(255, now);
+                osc2.frequency.exponentialRampToValueAtTime(46, now + 1.3);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1500, now);
+                filter.frequency.exponentialRampToValueAtTime(260, now + 1.3);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.28, now + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.35);
+
+                osc1.connect(filter);
+                osc2.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 1.35);
+                osc2.stop(now + 1.35);
+            } catch (e) {}
+        }
+
+        playExplosion() {
+            if (!this.ctx || this.muted) return;
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(135, now);
+                osc.frequency.exponentialRampToValueAtTime(28, now + 0.38);
+
+                gain.gain.setValueAtTime(0.32, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } catch (e) {}
+        }
+
+        playJump() {
+            if (!this.ctx || this.muted) return;
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(75, now);
+                osc.frequency.exponentialRampToValueAtTime(165, now + 0.18);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } catch (e) {}
+        }
+
+        playPickup() {
+            if (!this.ctx || this.muted) return;
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.22);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } catch (e) {}
+        }
+    }
+
+    const sound = new SoundEngine();
+
+    // =========================================================================
+    // 5. DOM REFERENCES & INPUT HANDLING
+    // =========================================================================
+    const hpBar = document.getElementById('hp-bar');
+    const hpText = document.getElementById('hp-text');
+    const atomicBar = document.getElementById('atomic-bar');
+    const atomicText = document.getElementById('atomic-text');
+    const powerBadge = document.getElementById('power-badge');
+    const stageNameEl = document.getElementById('stage-name');
+    const scoreText = document.getElementById('score-text');
+    const progressText = document.getElementById('progress-text');
+    const bossHud = document.getElementById('boss-hud');
+    const bossHpBar = document.getElementById('boss-hp-bar');
+    const bossHpText = document.getElementById('boss-hp-text');
+    const toastBanner = document.getElementById('toast-banner');
+    const startScreen = document.getElementById('start-screen');
+    const endScreen = document.getElementById('end-screen');
+    const endTitle = document.getElementById('end-title');
+    const endSubtitle = document.getElementById('end-subtitle');
+    const endStats = document.getElementById('end-stats');
+
+    const keys = {
+        left: false,
+        right: false,
+        up: false,
+        fire: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+            e.preventDefault();
+        }
+        if (!gameState.running && (e.code === 'Enter' || e.code === 'Space')) {
+            startNewGame();
+            return;
+        }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = true;
+        if (e.code === 'KeyF' || e.code === 'KeyZ' || e.code === 'KeyJ') keys.fire = true;
+        if (e.code === 'KeyE' || e.code === 'KeyX' || e.code === 'KeyK') triggerTailSlam();
+        if (e.code === 'KeyR') triggerTitanRoar();
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
+        if (e.code === 'KeyF' || e.code === 'KeyZ' || e.code === 'KeyJ') keys.fire = false;
+    });
+
+    // Mouse hold on canvas fires Atomic Breath when playing
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0 && gameState.running) {
+            sound.init();
+            keys.fire = true;
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        keys.fire = false;
+    });
+
+    // Bind on-screen touch & click buttons
+    function bindHoldButton(id, keyName) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const down = (e) => {
+            e.preventDefault();
+            sound.init();
+            keys[keyName] = true;
+        };
+        const up = (e) => {
+            e.preventDefault();
+            keys[keyName] = false;
+        };
+        el.addEventListener('mousedown', down);
+        el.addEventListener('mouseup', up);
+        el.addEventListener('mouseleave', up);
+        el.addEventListener('touchstart', down, { passive: false });
+        el.addEventListener('touchend', up, { passive: false });
+    }
+
+    bindHoldButton('btn-left', 'left');
+    bindHoldButton('btn-right', 'right');
+    bindHoldButton('btn-jump', 'up');
+    bindHoldButton('btn-fire', 'fire');
+
+    document.getElementById('btn-tail').addEventListener('click', (e) => {
+        e.preventDefault();
+        sound.init();
+        triggerTailSlam();
+    });
+    document.getElementById('btn-roar').addEventListener('click', (e) => {
+        e.preventDefault();
+        sound.init();
+        triggerTitanRoar();
+    });
+    document.getElementById('mute-btn').addEventListener('click', () => {
+        sound.init();
+        sound.toggleMute();
+    });
+
+    // =========================================================================
+    // 6. GAME STATE, STAGES & ENTITY DEFINITIONS
+    // =========================================================================
+    const gameState = {
+        running: false,
+        stageIndex: 0,
+        score: 0,
+        cameraX: 0,
+        time: 0,
+        shakeTime: 0,
+        shakeIntensity: 0,
+        toastTimer: 0
+    };
+
+    const STAGES = [
+        {
+            name: 'ACT I: VOLCANIC COASTLINE',
+            goalX: 4500,
+            skyTop: '#0b101d',
+            skyMid: '#241829',
+            skyBottom: '#4c1d1b',
+            emberColor: '#fb923c'
+        },
+        {
+            name: 'ACT II: MOSASAUR LAGOON',
+            goalX: 5000,
+            skyTop: '#051524',
+            skyMid: '#0e344d',
+            skyBottom: '#155e75',
+            emberColor: '#38bdf8'
+        },
+        {
+            name: 'ACT III: APEX CALDERA SHOWDOWN',
+            goalX: 3600,
+            skyTop: '#090a12',
+            skyMid: '#261429',
+            skyBottom: '#45121b',
+            emberColor: '#f43f5e'
+        }
+    ];
+
+    const player = {
+        x: 140,
+        y: GROUND_Y - 138,
+        w: 92,
+        h: 138,
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        grounded: true,
+        hp: 100,
+        maxHp: 100,
+        atomicEnergy: 100,
+        maxAtomicEnergy: 100,
+        atomicLevel: 1,
+        firing: false,
+        dorsalCharge: 0,
+        overchargeTimer: 0,
+        invulnTimer: 0,
+        tailSlamTimer: 0,
+        roarTimer: 0,
+        walkCycle: 0
+    };
+
+    let platforms = [];
+    let waterZones = [];
+    let destructibles = [];
+    let pickups = [];
+    let enemies = [];
+    let particles = [];
+    let floatingTexts = [];
+    let stageGoalX = 4500;
+
+    function rectIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+        return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    function addShake(intensity, duration) {
+        gameState.shakeIntensity = Math.max(gameState.shakeIntensity, intensity);
+        gameState.shakeTime = Math.max(gameState.shakeTime, duration);
+    }
+
+    function showToast(msg) {
+        toastBanner.textContent = msg;
+        toastBanner.style.opacity = '1';
+        gameState.toastTimer = 2.6;
+    }
+
+    function spawnParticle(x, y, vx, vy, size, color, life, type = 'spark', gravity = 0) {
+        if (particles.length > 260) particles.shift();
+        particles.push({
+            x, y, vx, vy, size, color,
+            life, maxLife: life,
+            type, gravity
+        });
+    }
+
+    function spawnFloatingText(x, y, text, color) {
+        floatingTexts.push({ x, y, text, color, life: 1.0, vy: -50 });
+    }
+
+    function createEnemy(type, x, patrolMin, patrolMax) {
+        if (type === 'trex') {
+            return {
+                type: 'trex',
+                x,
+                y: GROUND_Y - TREX_STANDING_HEIGHT,
+                w: 112,
+                h: TREX_STANDING_HEIGHT, // Exact 122px height matching Godzilla's max jump apex
+                vx: -85,
+                vy: 0,
+                facing: -1,
+                hp: 115,
+                maxHp: 115,
+                patrolMin,
+                patrolMax,
+                biteTimer: 0,
+                stunTimer: 0,
+                hitFlash: 0,
+                dead: false,
+                anim: Math.random() * 6
+            };
+        }
+        if (type === 'therizinosaurus') {
+            return {
+                type: 'therizinosaurus',
+                x,
+                y: GROUND_Y - 134,
+                w: 98,
+                h: 134,
+                vx: -65,
+                vy: 0,
+                facing: -1,
+                hp: 135,
+                maxHp: 135,
+                patrolMin,
+                patrolMax,
+                slashTimer: 0,
+                stunTimer: 0,
+                hitFlash: 0,
+                dead: false,
+                anim: Math.random() * 6
+            };
+        }
+        if (type === 'mosasaurus') {
+            return {
+                type: 'mosasaurus',
+                x,
+                y: GROUND_Y + 65,
+                baseY: GROUND_Y + 65,
+                w: 136,
+                h: 72,
+                vx: 0,
+                vy: 0,
+                facing: -1,
+                hp: 105,
+                maxHp: 105,
+                patrolMin,
+                patrolMax,
+                leapCooldown: 1.4 + Math.random() * 1.2,
+                airborne: false,
+                stunTimer: 0,
+                hitFlash: 0,
+                dead: false,
+                anim: 0
+            };
+        }
+        // Indominus Rex Boss
+        return {
+            type: 'indominus',
+            x,
+            y: GROUND_Y - 146,
+            w: 138,
+            h: 146,
+            vx: -110,
+            vy: 0,
+            facing: -1,
+            hp: 420,
+            maxHp: 420,
+            patrolMin,
+            patrolMax,
+            cloakAlpha: 1,
+            cloakTimer: 0,
+            pounceCooldown: 2.2,
+            stunTimer: 0,
+            hitFlash: 0,
+            dead: false,
+            anim: 0
+        };
+    }
+
+    // All elevated ledges are placed within 85px–105px above GROUND_Y (comfortably reachable with 122px jump!)
+    function buildStage(index) {
+        const stg = STAGES[index];
+        stageNameEl.textContent = stg.name;
+        stageGoalX = stg.goalX;
+
+        platforms = [];
+        waterZones = [];
+        destructibles = [];
+        pickups = [];
+        enemies = [];
+        particles = [];
+        floatingTexts = [];
+
+        player.x = 140;
+        player.y = GROUND_Y - player.h;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = true;
+        player.facing = 1;
+        gameState.cameraX = 0;
+        bossHud.classList.add('hidden');
+
+        if (index === 0) {
+            // ACT I: VOLCANIC COASTLINE
+            platforms.push(
+                { x: 560, y: GROUND_Y - 92, w: 170, h: 24 },
+                { x: 980, y: GROUND_Y - 96, w: 190, h: 24 },
+                { x: 1620, y: GROUND_Y - 88, w: 180, h: 24 },
+                { x: 2340, y: GROUND_Y - 95, w: 200, h: 24 },
+                { x: 3120, y: GROUND_Y - 90, w: 190, h: 24 },
+                { x: 3820, y: GROUND_Y - 94, w: 180, h: 24 }
+            );
+
+            destructibles.push(
+                { x: 840, y: GROUND_Y - 90, w: 46, h: 90, hp: 50 },
+                { x: 2050, y: GROUND_Y - 95, w: 48, h: 95, hp: 50 },
+                { x: 3480, y: GROUND_Y - 95, w: 48, h: 95, hp: 50 }
+            );
+
+            pickups.push(
+                { x: 630, y: GROUND_Y - 132, type: 'nuclear', collected: false },
+                { x: 1060, y: GROUND_Y - 136, type: 'heal', collected: false },
+                { x: 2420, y: GROUND_Y - 135, type: 'overcharge', collected: false },
+                { x: 3890, y: GROUND_Y - 134, type: 'nuclear', collected: false }
+            );
+
+            enemies.push(
+                createEnemy('trex', 740, 520, 960),
+                createEnemy('therizinosaurus', 1360, 1180, 1580),
+                createEnemy('trex', 1920, 1740, 2240),
+                createEnemy('therizinosaurus', 2740, 2550, 3040),
+                createEnemy('trex', 3360, 3180, 3720),
+                createEnemy('trex', 4120, 3920, 4360)
+            );
+        } else if (index === 1) {
+            // ACT II: MOSASAUR LAGOON
+            waterZones.push(
+                { x: 760, w: 320 },
+                { x: 1980, w: 360 },
+                { x: 3320, w: 380 }
+            );
+
+            platforms.push(
+                { x: 820, y: GROUND_Y - 86, w: 190, h: 22 },
+                { x: 1420, y: GROUND_Y - 94, w: 180, h: 24 },
+                { x: 2050, y: GROUND_Y - 88, w: 210, h: 22 },
+                { x: 2740, y: GROUND_Y - 95, w: 185, h: 24 },
+                { x: 3400, y: GROUND_Y - 88, w: 210, h: 22 },
+                { x: 4160, y: GROUND_Y - 92, w: 190, h: 24 }
+            );
+
+            destructibles.push(
+                { x: 1260, y: GROUND_Y - 92, w: 46, h: 92, hp: 55 },
+                { x: 2580, y: GROUND_Y - 92, w: 46, h: 92, hp: 55 }
+            );
+
+            pickups.push(
+                { x: 900, y: GROUND_Y - 126, type: 'heal', collected: false },
+                { x: 1490, y: GROUND_Y - 134, type: 'nuclear', collected: false },
+                { x: 2810, y: GROUND_Y - 135, type: 'overcharge', collected: false },
+                { x: 4240, y: GROUND_Y - 132, type: 'heal', collected: false }
+            );
+
+            enemies.push(
+                createEnemy('mosasaurus', 860, 780, 1040),
+                createEnemy('therizinosaurus', 1520, 1340, 1880),
+                createEnemy('mosasaurus', 2100, 2000, 2300),
+                createEnemy('trex', 2920, 2700, 3220),
+                createEnemy('mosasaurus', 3450, 3340, 3660),
+                createEnemy('therizinosaurus', 4020, 3820, 4420),
+                createEnemy('trex', 4560, 4340, 4820)
+            );
+        } else {
+            // ACT III: APEX CALDERA SHOWDOWN (INDOMINUS REX BOSS)
+            platforms.push(
+                { x: 640, y: GROUND_Y - 92, w: 185, h: 24 },
+                { x: 1260, y: GROUND_Y - 95, w: 195, h: 24 },
+                { x: 1940, y: GROUND_Y - 90, w: 185, h: 24 },
+                { x: 2580, y: GROUND_Y - 92, w: 200, h: 24 },
+                { x: 3060, y: GROUND_Y - 92, w: 200, h: 24 }
+            );
+
+            pickups.push(
+                { x: 710, y: GROUND_Y - 132, type: 'heal', collected: false },
+                { x: 1340, y: GROUND_Y - 135, type: 'overcharge', collected: false },
+                { x: 2650, y: GROUND_Y - 132, type: 'heal', collected: false },
+                { x: 3140, y: GROUND_Y - 132, type: 'overcharge', collected: false }
+            );
+
+            enemies.push(
+                createEnemy('trex', 860, 620, 1140),
+                createEnemy('therizinosaurus', 1560, 1320, 1840),
+                createEnemy('indominus', 2920, 2380, 3460)
+            );
+        }
+    }
+
+    // =========================================================================
+    // 7. COMBAT ABILITIES & DAMAGE LOGIC
+    // =========================================================================
+    function damageEnemy(enemy, amount, knockDir = 1) {
+        if (enemy.dead) return;
+        enemy.hp -= amount;
+        enemy.hitFlash = 0.14;
+
+        if (enemy.hp <= 0) {
+            enemy.hp = 0;
+            enemy.dead = true;
+            sound.playExplosion();
+            addShake(11, 0.35);
+
+            const pts = enemy.type === 'indominus' ? 5000 : enemy.type === 'therizinosaurus' ? 650 : 500;
+            gameState.score += pts;
+            spawnFloatingText(enemy.x + enemy.w * 0.5, enemy.y, `+${pts}`, '#fbbf24');
+
+            for (let i = 0; i < 28; i++) {
+                spawnParticle(
+                    enemy.x + Math.random() * enemy.w,
+                    enemy.y + Math.random() * enemy.h,
+                    (Math.random() - 0.5) * 340,
+                    -Math.random() * 320,
+                    6 + Math.random() * 7,
+                    i % 2 === 0 ? '#38bdf8' : '#f97316',
+                    0.65,
+                    'spark',
+                    480
+                );
+            }
+
+            if (enemy.type === 'indominus') {
+                bossHud.classList.add('hidden');
+                setTimeout(() => endGame(true), 850);
+            }
+        } else if (enemy.type !== 'indominus' && enemy.type !== 'mosasaurus') {
+            enemy.x += knockDir * 6;
+        }
+    }
+
+    function damagePlayer(amount, sourceX) {
+        if (player.invulnTimer > 0 || !gameState.running) return;
+        player.hp = Math.max(0, player.hp - amount);
+        player.invulnTimer = 1.05;
+        player.vy = -260;
+        player.vx = player.x < sourceX ? -240 : 240;
+        addShake(9, 0.25);
+        sound.playExplosion();
+        spawnFloatingText(player.x + player.w * 0.5, player.y - 10, `-${amount} HP`, '#f87171');
+
+        if (player.hp <= 0) {
+            endGame(false);
+        }
+    }
+
+    function triggerTailSlam() {
+        if (!gameState.running || player.tailSlamTimer > 0) return;
+        player.tailSlamTimer = 0.42;
+        addShake(8, 0.2);
+        sound.playExplosion();
+
+        const reachX = player.facing === 1 ? player.x + player.w - 15 : player.x - 135;
+        const slamW = 150;
+        const slamY = player.y + 25;
+        const slamH = player.h - 20;
+
+        for (let i = 0; i < 16; i++) {
+            spawnParticle(
+                reachX + Math.random() * slamW,
+                GROUND_Y - 6,
+                (Math.random() - 0.5) * 260,
+                -Math.random() * 210,
+                6,
+                '#94a3b8',
+                0.45,
+                'spark',
+                420
+            );
+        }
+
+        for (let i = destructibles.length - 1; i >= 0; i--) {
+            const d = destructibles[i];
+            if (rectIntersect(reachX, slamY, slamW, slamH, d.x, d.y, d.w, d.h)) {
+                d.hp -= 50;
+                if (d.hp <= 0) {
+                    gameState.score += 150;
+                    destructibles.splice(i, 1);
+                }
+            }
+        }
+
+        for (const e of enemies) {
+            if (!e.dead && rectIntersect(reachX, slamY, slamW, slamH, e.x, e.y, e.w, e.h)) {
+                damageEnemy(e, 48, player.facing);
+                if (e.type !== 'indominus') {
+                    e.x += player.facing * 85;
+                    e.stunTimer = 0.65;
+                }
+            }
+        }
+    }
+
+    function triggerTitanRoar() {
+        if (!gameState.running || player.roarTimer > 0) return;
+        player.roarTimer = 1.2;
+        sound.playGodzillaRoar();
+        addShake(10, 0.5);
+        showToast('ALPHA TITAN ROAR — PREDATORS STUNNED!');
+
+        for (const e of enemies) {
+            if (!e.dead && Math.abs((e.x + e.w * 0.5) - (player.x + player.w * 0.5)) < 540) {
+                e.stunTimer = e.type === 'indominus' ? 1.0 : 2.1;
+                spawnFloatingText(e.x + e.w * 0.5, e.y - 12, 'STUNNED!', '#38bdf8');
+            }
+        }
+    }
+
+    // =========================================================================
+    // 8. UPDATE SIMULATION LOOP
+    // =========================================================================
+    function update(dt) {
+        gameState.time += dt;
+
+        if (gameState.shakeTime > 0) {
+            gameState.shakeTime = Math.max(0, gameState.shakeTime - dt);
+        } else {
+            gameState.shakeIntensity = 0;
+        }
+
+        if (gameState.toastTimer > 0) {
+            gameState.toastTimer -= dt;
+            if (gameState.toastTimer <= 0) {
+                toastBanner.style.opacity = '0';
+            }
+        }
+
+        // Ambient volcanic ash & embers even on title screen
+        if (Math.random() < 0.45) {
+            const stg = STAGES[gameState.stageIndex];
+            spawnParticle(
+                gameState.cameraX + Math.random() * viewWidth,
+                viewHeight + 10,
+                (Math.random() - 0.5) * 45,
+                -45 - Math.random() * 65,
+                2.5 + Math.random() * 3,
+                stg.emberColor,
+                4.5,
+                'ember',
+                0
+            );
+        }
+
+        // Update particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += p.gravity * dt;
+            p.life -= dt;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        // Update floating texts
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
+            ft.y += ft.vy * dt;
+            ft.life -= dt;
+            if (ft.life <= 0) floatingTexts.splice(i, 1);
+        }
+
+        if (!gameState.running) return;
+
+        // Player timers
+        if (player.invulnTimer > 0) player.invulnTimer -= dt;
+        if (player.tailSlamTimer > 0) player.tailSlamTimer -= dt;
+        if (player.roarTimer > 0) player.roarTimer -= dt;
+        if (player.overchargeTimer > 0) player.overchargeTimer -= dt;
+
+        // Horizontal movement
+        const moveSpeed = 295;
+        if (keys.left) {
+            player.vx = -moveSpeed;
+            player.facing = -1;
+            player.walkCycle += dt * 9;
+        } else if (keys.right) {
+            player.vx = moveSpeed;
+            player.facing = 1;
+            player.walkCycle += dt * 9;
+        } else {
+            player.vx *= Math.pow(0.001, dt);
+            if (Math.abs(player.vx) < 8) player.vx = 0;
+        }
+
+        // Calibrated Jump (exact T-Rex standing height apex = 122px)
+        if (keys.up && player.grounded) {
+            player.vy = GODZILLA_JUMP_VY;
+            player.grounded = false;
+            sound.playJump();
+        }
+
+        // Gravity & vertical integration
+        const prevBottom = player.y + player.h;
+        player.vy += GRAVITY * dt;
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+
+        // Clamp left world boundary
+        if (player.x < 20) player.x = 20;
+
+        // Platform landing collision (one-way from above like Super Mario Bros)
+        player.grounded = false;
+        if (player.vy >= 0) {
+            for (const plat of platforms) {
+                if (
+                    player.x + player.w - 18 > plat.x &&
+                    player.x + 18 < plat.x + plat.w &&
+                    prevBottom <= plat.y + 12 &&
+                    player.y + player.h >= plat.y
+                ) {
+                    player.y = plat.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                    break;
+                }
+            }
+        }
+
+        // Solid ground floor collision
+        if (player.y + player.h >= GROUND_Y) {
+            player.y = GROUND_Y - player.h;
+            player.vy = 0;
+            player.grounded = true;
+        }
+
+        // Atomic Fire Breath mechanics
+        const overcharged = player.overchargeTimer > 0;
+        if (keys.fire && (player.atomicEnergy > 2 || overcharged)) {
+            player.firing = true;
+            player.dorsalCharge = Math.min(1, player.dorsalCharge + dt * 5.5);
+            if (!overcharged) {
+                player.atomicEnergy = Math.max(0, player.atomicEnergy - 24 * dt);
+            }
+            sound.setAtomicBeam(true, overcharged);
+            addShake(overcharged ? 4.2 : 2.2, 0.08);
+
+            const mouthX = player.facing === 1 ? player.x + player.w - 6 : player.x + 6;
+            const mouthY = player.y + 28;
+            const beamLength = (overcharged ? 470 : 350) + (player.atomicLevel - 1) * 45;
+            const beamX = player.facing === 1 ? mouthX : mouthX - beamLength;
+            const beamH = overcharged ? 58 : 42;
+
+            // Spawn plasma flame particles
+            for (let i = 0; i < 3; i++) {
+                spawnParticle(
+                    mouthX + player.facing * (15 + Math.random() * 40),
+                    mouthY + (Math.random() - 0.5) * 16,
+                    player.facing * (540 + Math.random() * 260),
+                    (Math.random() - 0.5) * 85,
+                    overcharged ? 13 : 9,
+                    i === 0 ? '#e0f2fe' : '#38bdf8',
+                    0.35,
+                    'plasma',
+                    0
+                );
+            }
+
+            // Melt obsidian pillars
+            for (let i = destructibles.length - 1; i >= 0; i--) {
+                const d = destructibles[i];
+                if (rectIntersect(beamX, mouthY - beamH * 0.5, beamLength, beamH, d.x, d.y, d.w, d.h)) {
+                    d.hp -= (overcharged ? 160 : 95) * dt;
+                    if (d.hp <= 0) {
+                        sound.playExplosion();
+                        gameState.score += 150;
+                        destructibles.splice(i, 1);
+                    }
+                }
+            }
+
+            // Scorch enemies in Atomic Breath stream
+            const dps = (overcharged ? 185 : 115) * (1 + (player.atomicLevel - 1) * 0.25);
+            for (const e of enemies) {
+                if (!e.dead && rectIntersect(beamX, mouthY - beamH * 0.5, beamLength, beamH, e.x, e.y, e.w, e.h)) {
+                    damageEnemy(e, dps * dt, player.facing);
+                }
+            }
+        } else {
+            player.firing = false;
+            player.dorsalCharge = Math.max(0, player.dorsalCharge - dt * 3.0);
+            player.atomicEnergy = Math.min(player.maxAtomicEnergy, player.atomicEnergy + 20 * dt);
+            sound.setAtomicBeam(false);
+        }
+
+        // Collect Nuclear / Vitality Power-Ups
+        for (const p of pickups) {
+            if (!p.collected && rectIntersect(player.x, player.y, player.w, player.h, p.x - 16, p.y - 16, 32, 32)) {
+                p.collected = true;
+                sound.playPickup();
+                if (p.type === 'nuclear') {
+                    player.atomicLevel = Math.min(3, player.atomicLevel + 1);
+                    player.atomicEnergy = player.maxAtomicEnergy;
+                    powerBadge.textContent = `ATOMIC LV.${player.atomicLevel}`;
+                    gameState.score += 300;
+                    showToast(`ATOMIC CORE ABSORBED — BEAM LV.${player.atomicLevel}!`);
+                    spawnFloatingText(p.x, p.y - 15, 'ATOMIC UPGRADE!', '#38bdf8');
+                } else if (p.type === 'overcharge') {
+                    player.overchargeTimer = 8.0;
+                    player.atomicEnergy = player.maxAtomicEnergy;
+                    gameState.score += 400;
+                    showToast('THERMONUCLEAR OVERCHARGE — UNLIMITED BEAM!');
+                    spawnFloatingText(p.x, p.y - 15, 'OVERCHARGE!', '#f43f5e');
+                } else {
+                    player.hp = Math.min(player.maxHp, player.hp + 35);
+                    gameState.score += 200;
+                    spawnFloatingText(p.x, p.y - 15, '+35 TITAN VITALITY', '#4ade80');
+                }
+            }
+        }
+
+        // Update Dinosaurs & Apex Predators
+        for (const e of enemies) {
+            if (e.dead) continue;
+            e.anim += dt * 7;
+            if (e.hitFlash > 0) e.hitFlash -= dt;
+            if (e.stunTimer > 0) {
+                e.stunTimer -= dt;
+                continue;
+            }
+
+            const distToPlayer = (player.x + player.w * 0.5) - (e.x + e.w * 0.5);
+
+            if (e.type === 'mosasaurus') {
+                // Aquatic ambush predator leaping out of lagoon trenches
+                if (!e.airborne) {
+                    e.y = e.baseY + Math.sin(gameState.time * 4 + e.x) * 8;
+                    e.leapCooldown -= dt;
+                    if (e.leapCooldown <= 0 && Math.abs(distToPlayer) < 460) {
+                        e.airborne = true;
+                        e.vy = -790;
+                        e.vx = Math.max(-240, Math.min(240, distToPlayer * 1.15));
+                        e.facing = e.vx >= 0 ? 1 : -1;
+                        sound.playExplosion();
+                    }
+                } else {
+                    e.vy += 1350 * dt;
+                    e.x += e.vx * dt;
+                    e.y += e.vy * dt;
+                    if (e.y >= e.baseY) {
+                        e.y = e.baseY;
+                        e.airborne = false;
+                        e.vy = 0;
+                        e.vx = 0;
+                        e.leapCooldown = 2.0;
+                    }
+                }
+            } else if (e.type === 'indominus') {
+                // Indominus Rex Boss AI (Camouflage + Pounce + Boss HUD)
+                if (Math.abs(distToPlayer) < 950) {
+                    bossHud.classList.remove('hidden');
+                    bossHpBar.style.width = `${(e.hp / e.maxHp) * 100}%`;
+                    bossHpText.textContent = `${Math.ceil(e.hp)} / ${e.maxHp}`;
+                }
+
+                e.cloakTimer += dt;
+                e.cloakAlpha = e.hitFlash > 0 ? 1 : 0.45 + 0.55 * Math.abs(Math.sin(e.cloakTimer * 1.6));
+
+                e.facing = distToPlayer >= 0 ? 1 : -1;
+                e.pounceCooldown -= dt;
+
+                if (e.pounceCooldown <= 0 && e.y + e.h >= GROUND_Y - 2 && Math.abs(distToPlayer) < 480) {
+                    e.vy = -560;
+                    e.vx = e.facing * 420;
+                    e.pounceCooldown = 2.6;
+                    sound.playGodzillaRoar();
+                } else if (e.y + e.h >= GROUND_Y - 2) {
+                    e.vx = e.facing * 155;
+                }
+
+                e.vy += GRAVITY * dt;
+                e.x += e.vx * dt;
+                e.y += e.vy * dt;
+                if (e.y + e.h >= GROUND_Y) {
+                    e.y = GROUND_Y - e.h;
+                    e.vy = 0;
+                }
+                e.x = Math.max(e.patrolMin, Math.min(e.patrolMax, e.x));
+            } else {
+                // T-Rex & Therizinosaurus Patrol + Aggro Charge
+                const speed = Math.abs(distToPlayer) < 380 ? (e.type === 'trex' ? 165 : 130) : 85;
+                if (Math.abs(distToPlayer) < 380) {
+                    e.facing = distToPlayer >= 0 ? 1 : -1;
+                } else {
+                    if (e.x <= e.patrolMin) e.facing = 1;
+                    if (e.x >= e.patrolMax) e.facing = -1;
+                }
+                e.x += e.facing * speed * dt;
+            }
+
+            // Mario-style Stomp from above OR predator melee bite/slash
+            if (rectIntersect(player.x + 12, player.y + 8, player.w - 24, player.h - 12, e.x + 10, e.y + 10, e.w - 20, e.h - 14)) {
+                const isStomp = player.vy > 80 && (player.y + player.h - player.vy * dt) <= e.y + 34;
+                if (isStomp) {
+                    player.vy = GODZILLA_JUMP_VY * 0.85;
+                    damageEnemy(e, 55, player.facing);
+                    spawnFloatingText(e.x + e.w * 0.5, e.y - 10, 'TITAN STOMP!', '#38bdf8');
+                } else {
+                    const dmg = e.type === 'indominus' ? 24 : e.type === 'therizinosaurus' ? 18 : 15;
+                    damagePlayer(dmg, e.x + e.w * 0.5);
+                }
+            }
+        }
+
+        // Smooth camera tracking
+        const targetCamX = Math.max(0, Math.min(stageGoalX - viewWidth + 220, player.x - viewWidth * 0.32));
+        gameState.cameraX += (targetCamX - gameState.cameraX) * Math.min(1, dt * 7.5);
+
+        // Stage progression check (Acts I & II advance at goal beacon)
+        if (gameState.stageIndex < 2 && player.x >= stageGoalX) {
+            gameState.stageIndex++;
+            gameState.score += 1000;
+            sound.playGodzillaRoar();
+            buildStage(gameState.stageIndex);
+            showToast(STAGES[gameState.stageIndex].name);
+        }
+
+        // Sync HUD readouts
+        hpBar.style.width = `${(player.hp / player.maxHp) * 100}%`;
+        hpText.textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+        atomicBar.style.width = `${(player.atomicEnergy / player.maxAtomicEnergy) * 100}%`;
+        atomicText.textContent = player.overchargeTimer > 0 ? 'OVERCHARGE!' : `${Math.round(player.atomicEnergy)}%`;
+        scoreText.textContent = String(gameState.score).padStart(6, '0');
+        const pct = Math.min(100, Math.max(0, Math.round((player.x / stageGoalX) * 100)));
+        progressText.textContent = `${pct}%`;
+    }
+
+    // =========================================================================
+    // 9. REALISTIC PROCEDURAL RENDERING ENGINE
+    // =========================================================================
+    function renderBackground() {
+        const stg = STAGES[gameState.stageIndex];
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+        skyGrad.addColorStop(0, stg.skyTop);
+        skyGrad.addColorStop(0.55, stg.skyMid);
+        skyGrad.addColorStop(1, stg.skyBottom);
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, viewWidth, WORLD_HEIGHT);
+
+        // Atmospheric Moon / Volcanic Eclipse Sun
+        const sunX = viewWidth * 0.78 - gameState.cameraX * 0.04;
+        const sunGrad = ctx.createRadialGradient(sunX, 115, 10, sunX, 115, 95);
+        sunGrad.addColorStop(0, 'rgba(254, 243, 199, 0.9)');
+        sunGrad.addColorStop(0.35, 'rgba(251, 146, 60, 0.35)');
+        sunGrad.addColorStop(1, 'rgba(251, 146, 60, 0)');
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, 115, 95, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Far Parallax Volcanic Mountain Range
+        ctx.fillStyle = '#141118';
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        for (let sx = -200; sx <= viewWidth + 300; sx += 260) {
+            const wx = sx - ((gameState.cameraX * 0.16) % 260);
+            ctx.lineTo(wx + 130, 215 + Math.sin((sx + gameState.cameraX * 0.16) * 0.01) * 35);
+            ctx.lineTo(wx + 260, GROUND_Y);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid-ground Jagged Basalt Ridges
+        ctx.fillStyle = '#1c1821';
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        for (let sx = -180; sx <= viewWidth + 240; sx += 180) {
+            const wx = sx - ((gameState.cameraX * 0.32) % 180);
+            ctx.lineTo(wx + 90, 310 + Math.cos((sx + gameState.cameraX * 0.32) * 0.02) * 28);
+            ctx.lineTo(wx + 180, GROUND_Y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function renderTerrainAndProps() {
+        const camX = gameState.cameraX;
+
+        // Ground Basalt Strata
+        ctx.save();
+        ctx.translate(-camX, 0);
+
+        ctx.fillStyle = basaltPattern;
+        ctx.fillRect(camX - 40, GROUND_Y, viewWidth + 80, WORLD_HEIGHT - GROUND_Y);
+
+        // Top Volcanic Crust Rim
+        const rimGrad = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 14);
+        rimGrad.addColorStop(0, '#57534e');
+        rimGrad.addColorStop(1, '#1c1917');
+        ctx.fillStyle = rimGrad;
+        ctx.fillRect(camX - 40, GROUND_Y, viewWidth + 80, 14);
+
+        // Lagoon Water Trenches (Act II)
+        for (const wz of waterZones) {
+            const wGrad = ctx.createLinearGradient(0, GROUND_Y - 6, 0, WORLD_HEIGHT);
+            wGrad.addColorStop(0, 'rgba(14, 165, 233, 0.72)');
+            wGrad.addColorStop(1, 'rgba(3, 105, 161, 0.95)');
+            ctx.fillStyle = wGrad;
+            ctx.fillRect(wz.x, GROUND_Y - 4, wz.w, WORLD_HEIGHT - GROUND_Y + 4);
+        }
+
+        // Elevated Basalt Platforms
+        for (const plat of platforms) {
+            ctx.fillStyle = basaltPattern;
+            ctx.beginPath();
+            ctx.roundRect(plat.x, plat.y, plat.w, plat.h, 6);
+            ctx.fill();
+            ctx.strokeStyle = '#78716c';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Destructible Obsidian Pillars
+        for (const d of destructibles) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(d.x, d.y, d.w, d.h);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(d.x, d.y, d.w, d.h);
+        }
+
+        // Power-up Orbs
+        for (const p of pickups) {
+            if (p.collected) continue;
+            const bob = Math.sin(gameState.time * 5 + p.x) * 5;
+            const color = p.type === 'nuclear' ? '#38bdf8' : p.type === 'overcharge' ? '#f43f5e' : '#4ade80';
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 16;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y + bob, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(p.x - 3, p.y + bob - 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Stage Goal Beacon (Acts I & II)
+        if (gameState.stageIndex < 2) {
+            const beaconGrad = ctx.createLinearGradient(stageGoalX, GROUND_Y - 240, stageGoalX, GROUND_Y);
+            beaconGrad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+            beaconGrad.addColorStop(1, 'rgba(56, 189, 248, 0.55)');
+            ctx.fillStyle = beaconGrad;
+            ctx.fillRect(stageGoalX - 24, GROUND_Y - 240, 48, 240);
+        }
+
+        ctx.restore();
+    }
+
+    function renderGodzilla() {
+        if (player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0) return;
+
+        ctx.save();
+        const cx = player.x - gameState.cameraX + player.w * 0.5;
+        const cy = player.y + player.h * 0.5;
+        ctx.translate(cx, cy);
+        ctx.scale(player.facing, 1);
+
+        const walkOffset = player.grounded ? Math.sin(player.walkCycle) * 5 : 0;
+        const chargeGlow = Math.max(player.dorsalCharge, player.overchargeTimer > 0 ? 0.95 : 0.25);
+
+        // Heavy Whipping Tail
+        const tailWhip = player.tailSlamTimer > 0 ? Math.sin(player.tailSlamTimer * 24) * 38 : Math.sin(gameState.time * 3.5) * 8;
+        ctx.fillStyle = godzillaSkinPattern;
+        ctx.beginPath();
+        ctx.moveTo(-22, 22);
+        ctx.quadraticCurveTo(-76, 36 + tailWhip, -112, 12 + tailWhip);
+        ctx.quadraticCurveTo(-70, 52 + tailWhip, -18, 48);
+        ctx.closePath();
+        ctx.fill();
+
+        // Jagged Maple-Leaf Dorsal Plates with Atomic Cherenkov Glow
+        ctx.save();
+        ctx.shadowColor = player.overchargeTimer > 0 ? '#f43f5e' : '#38bdf8';
+        ctx.shadowBlur = 12 + chargeGlow * 22;
+        ctx.fillStyle = chargeGlow > 0.5 ? '#7dd3fc' : '#334155';
+        const spineCoords = [
+            [-32, -32, 18],
+            [-38, -12, 24],
+            [-40, 10, 22],
+            [-36, 30, 16]
+        ];
+        for (const [sx, sy, size] of spineCoords) {
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - size * 0.5);
+            ctx.lineTo(sx - size, sy);
+            ctx.lineTo(sx, sy + size * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // Muscular Torso & Thick Legs
+        ctx.fillStyle = godzillaSkinPattern;
+        ctx.beginPath();
+        ctx.roundRect(-30, -42, 58, 92, 22);
+        ctx.fill();
+
+        // Hind & Front Legs
+        ctx.fillRect(-24, 42 + walkOffset, 20, 27 - walkOffset);
+        ctx.fillRect(6, 42 - walkOffset, 20, 27 + walkOffset);
+
+        // Muscular Arms with Claws
+        ctx.beginPath();
+        ctx.roundRect(14, -18, 28, 13, 6);
+        ctx.fill();
+
+        // Armored Kaiju Head & Snout
+        ctx.beginPath();
+        ctx.roundRect(-14, -68, 52, 32, 12);
+        ctx.fill();
+
+        // Lower Jaw (opens wide when breathing fire or roaring)
+        const jawOpen = (player.firing || player.roarTimer > 0) ? 11 : 2;
+        ctx.save();
+        ctx.translate(10, -40);
+        ctx.rotate(jawOpen * 0.045);
+        ctx.fillRect(-10, 0, 36, 10);
+        ctx.restore();
+
+        // Glowing Atomic Eye
+        ctx.fillStyle = player.overchargeTimer > 0 ? '#fb7185' : '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(16, -56, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Multi-Layered Atomic Fire Breath Beam
+        if (player.firing) {
+            const overcharged = player.overchargeTimer > 0;
+            const beamLen = (overcharged ? 470 : 350) + (player.atomicLevel - 1) * 45;
+            const outerColor = overcharged ? 'rgba(244, 63, 94, 0.42)' : 'rgba(14, 165, 233, 0.45)';
+            const midColor = overcharged ? 'rgba(251, 146, 60, 0.82)' : 'rgba(56, 189, 248, 0.85)';
+
+            ctx.save();
+            ctx.shadowColor = overcharged ? '#f43f5e' : '#38bdf8';
+            ctx.shadowBlur = 26;
+
+            // Outer plasma cone
+            ctx.fillStyle = outerColor;
+            ctx.beginPath();
+            ctx.moveTo(34, -44);
+            ctx.lineTo(34 + beamLen, -74 + Math.sin(gameState.time * 45) * 6);
+            ctx.lineTo(34 + beamLen, -14 + Math.cos(gameState.time * 45) * 6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner mid-stream
+            ctx.fillStyle = midColor;
+            ctx.beginPath();
+            ctx.moveTo(34, -44);
+            ctx.lineTo(34 + beamLen * 0.96, -60);
+            ctx.lineTo(34 + beamLen * 0.96, -28);
+            ctx.closePath();
+            ctx.fill();
+
+            // White-hot superheated core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(34, -44);
+            ctx.lineTo(34 + beamLen * 0.9, -49);
+            ctx.lineTo(34 + beamLen * 0.9, -39);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    function renderEnemies() {
+        for (const e of enemies) {
+            if (e.dead) continue;
+            const screenX = e.x - gameState.cameraX;
+            if (screenX + e.w < -120 || screenX > viewWidth + 120) continue;
+
+            ctx.save();
+            if (e.type === 'indominus') {
+                ctx.globalAlpha = e.cloakAlpha;
+            }
+
+            const cx = screenX + e.w * 0.5;
+            const cy = e.y + e.h * 0.5;
+            ctx.translate(cx, cy);
+            ctx.scale(e.facing, 1);
+
+            if (e.hitFlash > 0) {
+                ctx.filter = 'brightness(2.2)';
+            }
+
+            const stride = Math.sin(e.anim) * 6;
+
+            if (e.type === 'trex') {
+                // Tyrannosaurus Rex (122px tall)
+                ctx.fillStyle = trexSkinPattern;
+                // Heavy counter-balance tail
+                ctx.beginPath();
+                ctx.moveTo(-25, -10);
+                ctx.lineTo(-82, -22 + stride * 0.5);
+                ctx.lineTo(-22, 14);
+                ctx.closePath();
+                ctx.fill();
+                // Torso & legs
+                ctx.beginPath();
+                ctx.roundRect(-28, -28, 56, 52, 16);
+                ctx.fill();
+                ctx.fillRect(-16, 20 + stride, 16, 40 - stride);
+                ctx.fillRect(6, 20 - stride, 16, 40 + stride);
+                // Massive skull & serrated jaws
+                ctx.beginPath();
+                ctx.roundRect(14, -56, 44, 30, 8);
+                ctx.fill();
+                ctx.fillRect(16, -24, 36, 9);
+                // Amber predator eye
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(36, -46, 3.2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (e.type === 'therizinosaurus') {
+                // Therizinosaurus with meter-long scythe claws
+                ctx.fillStyle = theriSkinPattern;
+                ctx.beginPath();
+                ctx.roundRect(-26, -34, 52, 64, 18);
+                ctx.fill();
+                ctx.fillRect(-16, 26 + stride, 15, 40 - stride);
+                ctx.fillRect(4, 26 - stride, 15, 40 + stride);
+                // Long neck & crested head
+                ctx.beginPath();
+                ctx.roundRect(6, -64, 32, 34, 10);
+                ctx.fill();
+                // Signature Triple Scythe Claws
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 3;
+                for (let c = -1; c <= 1; c++) {
+                    ctx.beginPath();
+                    ctx.moveTo(22, -4 + c * 7);
+                    ctx.quadraticCurveTo(46, 2 + c * 7, 56, 22 + c * 7);
+                    ctx.stroke();
+                }
+            } else if (e.type === 'mosasaurus') {
+                // Mosasaurus Marine Apex Predator
+                ctx.fillStyle = mosaSkinPattern;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 62, 24, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Flippers & fluke tail
+                ctx.beginPath();
+                ctx.moveTo(-54, 0);
+                ctx.lineTo(-84, -22);
+                ctx.lineTo(-76, 20);
+                ctx.closePath();
+                ctx.fill();
+                // Jaws
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.moveTo(32, -8);
+                ctx.lineTo(62, -2);
+                ctx.lineTo(32, 8);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Indominus Rex Hybrid Boss
+                ctx.fillStyle = indomSkinPattern;
+                ctx.beginPath();
+                ctx.moveTo(-30, -12);
+                ctx.lineTo(-96, -28 + stride * 0.5);
+                ctx.lineTo(-26, 18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.roundRect(-34, -36, 68, 64, 18);
+                ctx.fill();
+                ctx.fillRect(-20, 24 + stride, 18, 48 - stride);
+                ctx.fillRect(8, 24 - stride, 18, 48 + stride);
+                // Horned hybrid skull
+                ctx.beginPath();
+                ctx.roundRect(18, -68, 52, 34, 10);
+                ctx.fill();
+                // Glowing crimson predator eye
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(44, -56, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            // Compact enemy health bar above non-boss predators
+            if (e.type !== 'indominus' && e.hp < e.maxHp) {
+                const bw = 64;
+                const bx = screenX + (e.w - bw) * 0.5;
+                const by = e.y - 12;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fillRect(bx, by, bw, 5);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(bx, by, bw * (e.hp / e.maxHp), 5);
+            }
+        }
+    }
+
+    function renderParticlesAndEffects() {
+        ctx.save();
+        ctx.translate(-gameState.cameraX, 0);
+
+        for (const p of particles) {
+            const alpha = Math.max(0, p.life / p.maxLife);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * (p.type === 'plasma' ? alpha : 1), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.font = '800 14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        for (const ft of floatingTexts) {
+            ctx.globalAlpha = Math.max(0, ft.life);
+            ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y);
+        }
+
+        ctx.restore();
+    }
+
+    function render() {
+        ctx.save();
+
+        // Screen shake offset
+        if (gameState.shakeTime > 0 && gameState.shakeIntensity > 0) {
+            const sx = (Math.random() - 0.5) * gameState.shakeIntensity * 2;
+            const sy = (Math.random() - 0.5) * gameState.shakeIntensity * 2;
+            ctx.translate(sx, sy);
+        }
+
+        renderBackground();
+        renderTerrainAndProps();
+        renderEnemies();
+        renderGodzilla();
+        renderParticlesAndEffects();
+
+        ctx.restore();
+    }
+
+    // =========================================================================
+    // 10. SAFE MAIN ANIMATION LOOP & STARTUP HANDLERS
+    // =========================================================================
+    let lastTimestamp = performance.now();
+
+    function gameLoop(now) {
+        try {
+            const dt = Math.min(0.05, Math.max(0.001, (now - lastTimestamp) / 1000));
+            lastTimestamp = now;
+
+            update(dt);
+            render();
+        } catch (err) {
+            console.error('Frame recovery:', err);
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    function startNewGame(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        startScreen.classList.add('hidden');
+        endScreen.classList.add('hidden');
+
+        sound.init();
+        sound.playGodzillaRoar();
+
+        gameState.stageIndex = 0;
+        gameState.score = 0;
+        gameState.running = true;
+
+        player.hp = 100;
+        player.maxHp = 100;
+        player.atomicEnergy = 100;
+        player.atomicLevel = 1;
+        player.overchargeTimer = 0;
+        powerBadge.textContent = 'ATOMIC LV.1';
+
+        buildStage(0);
+        showToast('ACT I: VOLCANIC COASTLINE — UNLEASH ATOMIC FIRE');
+    }
+
+    function endGame(victory) {
+        gameState.running = false;
+        sound.setAtomicBeam(false);
+        endScreen.classList.remove('hidden');
+
+        if (victory) {
+            sound.playGodzillaRoar();
+            endTitle.textContent = 'APEX SUPREMACY';
+            endTitle.className = 'font-cinzel font-black text-3xl sm:text-4xl text-amber-400 tracking-wider mb-2';
+            endSubtitle.textContent = 'INDOMINUS REX VANQUISHED — THE KING REIGNS';
+        } else {
+            endTitle.textContent = 'TITAN FALLEN';
+            endTitle.className = 'font-cinzel font-black text-3xl sm:text-4xl text-rose-500 tracking-wider mb-2';
+            endSubtitle.textContent = 'THE PREHISTORIC PREDATORS OVERWHELMED THE COAST';
+        }
+        endStats.textContent = `FINAL SCORE: ${String(gameState.score).padStart(6, '0')}`;
+    }
+
+    // Allow clicking anywhere on the title overlay, the start button, or pressing Enter/Space
+    startScreen.addEventListener('click', startNewGame);
+    document.getElementById('start-btn').addEventListener('click', startNewGame);
+    document.getElementById('restart-btn').addEventListener('click', startNewGame);
+
+    // Initialize world immediately and render first frame synchronously before loop starts
+    buildStage(0);
+    render();
+    requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
